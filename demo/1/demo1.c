@@ -19,7 +19,11 @@ int main(int argc, char *argv[]) {
     res = read(fd, &selector, sizeof(unsigned int));
 
     if(res == sizeof(unsigned int)) {
-      selector = htonl(selector);
+      selector = ntohl(selector);
+
+      //if(selector < sizeof(data_array)/sizeof(data_array[0])) {
+      //  printf("%d\n", data_array[selector]);
+      //}
       printf("%d\n", data_array[selector]);
     }
 
