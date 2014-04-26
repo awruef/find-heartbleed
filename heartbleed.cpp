@@ -7,15 +7,29 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class ExampleChecker : public Checker < check::PreStmt<CallExpr> > {
+
+class NetworkTaintChecker: public Checker < check::PreCall, check::PostCall > {
   mutable OwningPtr<BugType> BT;
 
 public:
-  void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
+  //void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
+  void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
+  void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
+  //void checkBranchCondition(const Stmt *Condition, CheckerContext &Ctx) const;
 };
+
 } 
 
-void ExampleChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const {
+//checker logic
+
+//check memcpy / memset calls
+void NetworkTaintChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
+
+  return;
+}
+
+//check for htonl/htons 
+void NetworkTaintChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
 
   return;
 }
@@ -23,7 +37,7 @@ void ExampleChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const {
 // Register plugin!
 extern "C"
 void clang_registerCheckers(CheckerRegistry &registry) {
-  registry.addChecker<ExampleChecker>("example.ExampleChecker", "my example checker");
+  registry.addChecker<NetworkTaintChecker>("security.NetworkTaint", "my example checker");
 }
 
 extern "C"
