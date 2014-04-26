@@ -17,6 +17,8 @@ class NetworkTaintChecker: public Checker < check::PreCall,
                                             check::Location > {
   mutable OwningPtr<BugType> BT;
 
+
+  bool isArgUnConstrained(Optional<NonLoc>, SValBuilder &, ProgramStateRef) const;
 public:
   NetworkTaintChecker(void) {
     this->BT.reset(new BugType("Tainted dereference", "Example"));
@@ -31,6 +33,44 @@ public:
 
 //checker logic
 
+bool NetworkTaintChecker::isArgUnConstrained(Optional<NonLoc> Arg, SValBuilder &builder, ProgramStateRef state) const {
+  bool  result = false;
+
+  if(Arg) {
+    llvm::APInt V(32, 5000);
+    SVal        Val = builder.makeIntVal(V, false); 
+
+    Optional<NonLoc>  NLVal = Val.getAs<NonLoc>();
+
+    if(!NLVal) {
+      return result;
+    }
+
+    SVal  cmprLT = builder.evalBinOpNN( state, 
+                                        BO_GT, 
+                                        *Arg, 
+                                        *NLVal, 
+                                        builder.getConditionType());
+
+    Optional<NonLoc>  NLcmprLT = cmprLT.getAs<NonLoc>();
+
+    if(!NLcmprLT) {
+      return result;
+    }
+
+    std::pair<ProgramStateRef,ProgramStateRef>  p = 
+      state->assume(*NLcmprLT);
+
+    ProgramStateRef trueState = p.first;
+    
+    if(trueState) {
+      result = true;
+    }
+  }
+
+  return result;
+}
+
 //check memcpy / memset calls
 void NetworkTaintChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
@@ -38,7 +78,25 @@ void NetworkTaintChecker::checkPreCall(const CallEvent &Call, CheckerContext &C)
 
   if(ID->getName() == "memcpy") {
     //check if the 3rd argument is tainted and constrained 
+    SVal            SizeArg = Call.getArgSVal(2);
+    ProgramStateRef state =C.getState();
 
+    if(state->isTainted(SizeArg)) {
+      SValBuilder       &svalBuilder = C.getSValBuilder();
+      Optional<NonLoc>  SizeArgNL = SizeArg.getAs<NonLoc>();
+
+      if(!SizeArgNL) {
+        return;
+      }
+
+      if(this->isArgUnConstrained(SizeArgNL, svalBuilder, state) == true) {
+        ExplodedNode  *loc = C.generateSink();
+        if(loc) {
+          BugReport *bug = new BugReport(*this->BT, "Tainted, unconstrained value used in memcpy size", loc);
+          C.emitReport(bug);
+        }
+      }
+    }
   }
  
   return;
@@ -64,40 +122,13 @@ void NetworkTaintChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
     SValBuilder &svalBuilder = C.getSValBuilder();
 
     //check if the value is constrained 
-    llvm::APInt V(32, 5000);
-    SVal        Val = svalBuilder.makeIntVal(V, false); 
-
-    Optional<NonLoc>  NLVal = Val.getAs<NonLoc>();
-
-    if(!NLVal) {
-      return;
-    }
-
     Optional<NonLoc>  idxNL = Idx.getAs<NonLoc>();
+
     if(!idxNL) {
       return;
     }
 
-    SVal  cmprLT = svalBuilder.evalBinOpNN( state, 
-                                            BO_GT, 
-                                            *idxNL, 
-                                            *NLVal, 
-                                            svalBuilder.getConditionType());
-
-    Optional<NonLoc>  NLcmprand = cmprLT.getAs<NonLoc>();
-
-    if(!NLcmprand) {
-      return;
-    }
-
-    //try and assert cmprand
-    std::pair<ProgramStateRef,ProgramStateRef>  p = 
-      state->assume(*NLcmprand);
-
-    ProgramStateRef trueState = p.first;
-    ProgramStateRef falseState = p.second;
-
-    if(trueState) {
+    if(this->isArgUnConstrained(idxNL, svalBuilder, state) == true) {
       //report a bug!
       ExplodedNode *loc = C.generateSink();
       if(loc) {

@@ -23,7 +23,10 @@ int main(int argc, char *argv[]) {
     if(res == sizeof(int)) {
       size = ntohl(size);
 
-      memcpy(buf, data_array, size);
+      if(size < sizeof(data_array)) {
+        memcpy(buf, data_array, size);
+      }
+      //memcpy(buf, data_array, size);
     }
 
     close(fd);
