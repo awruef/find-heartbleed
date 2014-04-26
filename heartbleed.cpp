@@ -18,6 +18,10 @@ class NetworkTaintChecker: public Checker < check::PreCall,
   mutable OwningPtr<BugType> BT;
 
 public:
+  NetworkTaintChecker(void) {
+    this->BT.reset(new BugType("Tainted dereference", "Example"));
+  }
+
   void checkPreCall(const CallEvent &, CheckerContext &) const;
   void checkPostCall(const CallEvent &, CheckerContext &) const;
   void checkLocation(SVal , bool , const Stmt* , CheckerContext &) const;
@@ -51,60 +55,7 @@ void NetworkTaintChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
   ProgramStateRef       state = C.getState();
 
   if(state->isTainted(Idx)) {
-    //ConstraintManager &constr = C.getConstraintManager();
     SValBuilder &svalBuilder = C.getSValBuilder();
-
-    //llvm::errs() << "idx is tainted\n";
-    
-    //what are constraints on Idx? 
-    //build a comparson to see if state >= 0
-    /*Optional<NonLoc>  constZero = svalBuilder.makeZeroVal(svalBuilder.getArrayIndexType()).getAs<NonLoc>();
-    if(!constZero) {
-      return;
-    }
-
-    Optional<NonLoc>  idxNL = Idx.getAs<NonLoc>();
-    if(!idxNL) {
-      return;
-    }
-
-    SVal  cmpr = svalBuilder.evalBinOpNN(state, BO_GE, *idxNL, *constZero, svalBuilder.getConditionType());
-
-    //build a comparison to see if state < 5000
-    llvm::APInt V(32, 6);
-    SVal        Val = svalBuilder.makeIntVal(V, false); 
-
-    Optional<NonLoc>  NLVal = Val.getAs<NonLoc>();
-
-    if(!NLVal) {
-      return;
-    }
-
-    Optional<NonLoc>  NLcmpr = cmpr.getAs<NonLoc>();
-
-    if(!NLcmpr) {
-      return;
-    }
-
-    SVal  cmprLT = svalBuilder.evalBinOpNN(state, BO_LT, *idxNL, *NLVal, svalBuilder.getConditionType());
-
-    //AND these two expressions together
-    Optional<NonLoc>  NLcmprLT = cmprLT.getAs<NonLoc>();
-
-    if(!NLcmprLT) {
-      return;
-    }
-
-    SVal cmprand = svalBuilder.evalBinOpNN(state, BO_LAnd, *NLcmprLT, *NLcmpr, svalBuilder.getConditionType());
-
-    cmprand.dump();
-    llvm::errs() << "\n";
-
-    Optional<NonLoc>  NLcmprand = cmprand.getAs<NonLoc>();
-
-    if(!NLcmprand) {
-      return;
-    }*/
 
     llvm::APInt V(32, 5000);
     SVal        Val = svalBuilder.makeIntVal(V, false); 
@@ -128,9 +79,6 @@ void NetworkTaintChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
       return;
     }
 
-    //cmprLT.dump();
-    //llvm::errs() << "\n";
-
     //try and assert cmprand
     std::pair<ProgramStateRef,ProgramStateRef>  p = 
       state->assume(*NLcmprand);
@@ -139,28 +87,13 @@ void NetworkTaintChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
     ProgramStateRef falseState = p.second;
 
     if(trueState) {
-      llvm::errs() << "unsafe!\n";
       //report a bug!
+      ExplodedNode *loc = C.generateSink();
+      if(loc) {
+        BugReport *bug = new BugReport(*this->BT, "Tainted, unconstrained value used in array index", loc);
+        C.emitReport(bug);
+      }
     }
-
-    /*if(trueState) {
-      llvm::errs() << "condition is true in this state\n";
-      trueState->dump();
-      llvm::errs() << "\n";
-    } else {
-      llvm::errs() << "condition is not true in this state\n";
-    }
-
-    if(falseState) {
-      llvm::errs() << "condition is false in this state\n";
-      falseState->dump();
-      llvm::errs() << "\n";
-    } else {
-      llvm::errs() << "condition is not false in this state\n";
-    }*/
-
-    //state->dump();
-    //llvm::errs() << "\n";
   }
 
   return;
@@ -174,13 +107,10 @@ void NetworkTaintChecker::checkPostCall(const CallEvent &Call, CheckerContext &C
   if(ID->getName() == "ntohl" || ID->getName() == "ntohl") {
     ProgramStateRef State = C.getState();
 
-    //llvm::errs() << "found ntohl/s call\n";
     //taint the value written to by this call 
     SymbolRef Sym = Call.getReturnValue().getAsSymbol(); 
 
     if(Sym) {
-      //Sym->dump();
-      //llvm::errs() << "\n";
       ProgramStateRef newState = State->addTaint(Sym);
       C.addTransition(newState);
     }

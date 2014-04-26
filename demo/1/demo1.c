@@ -21,10 +21,10 @@ int main(int argc, char *argv[]) {
     if(res == sizeof(unsigned int)) {
       selector = ntohl(selector);
 
-      //if(selector < sizeof(data_array)/sizeof(data_array[0])) {
-      //  printf("%d\n", data_array[selector]);
-      //}
-      printf("%d\n", data_array[selector]);
+      if(selector < sizeof(data_array)/sizeof(data_array[0])) {
+        printf("%d\n", data_array[selector]);
+      }
+      //printf("%d\n", data_array[selector]);
     }
 
     close(fd);
