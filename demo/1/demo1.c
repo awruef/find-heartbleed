@@ -24,7 +24,8 @@ int main(int argc, char *argv[]) {
       if(selector < sizeof(data_array)/sizeof(data_array[0])) {
         printf("%d\n", data_array[selector]);
       }
-      //printf("%d\n", data_array[selector]);
+
+      printf("%d\n", data_array[selector]);
     }
 
     close(fd);

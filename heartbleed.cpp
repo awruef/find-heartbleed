@@ -34,7 +34,13 @@ public:
 //check memcpy / memset calls
 void NetworkTaintChecker::checkPreCall(const CallEvent &Call, CheckerContext &C) const {
   ProgramStateRef State = C.getState();
+  const IdentifierInfo *ID = Call.getCalleeIdentifier();
 
+  if(ID->getName() == "memcpy") {
+    //check if the 3rd argument is tainted and constrained 
+
+  }
+ 
   return;
 }
 
@@ -57,6 +63,7 @@ void NetworkTaintChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
   if(state->isTainted(Idx)) {
     SValBuilder &svalBuilder = C.getSValBuilder();
 
+    //check if the value is constrained 
     llvm::APInt V(32, 5000);
     SVal        Val = svalBuilder.makeIntVal(V, false); 
 
@@ -71,7 +78,11 @@ void NetworkTaintChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
       return;
     }
 
-    SVal  cmprLT = svalBuilder.evalBinOpNN(state, BO_GT, *idxNL, *NLVal, svalBuilder.getConditionType());
+    SVal  cmprLT = svalBuilder.evalBinOpNN( state, 
+                                            BO_GT, 
+                                            *idxNL, 
+                                            *NLVal, 
+                                            svalBuilder.getConditionType());
 
     Optional<NonLoc>  NLcmprand = cmprLT.getAs<NonLoc>();
 
