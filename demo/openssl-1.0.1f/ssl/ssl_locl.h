@@ -246,8 +246,11 @@
 				} \
 			}
 
-#define n2s(c,s)	((s=(((unsigned int)(c[0]))<< 8)| \
-			    (((unsigned int)(c[1]))    )),c+=2)
+extern int xyzzy(int);
+/*#define n2s(c,s)	((s=(((unsigned int)(c[0]))<< 8)| \
+			    (((unsigned int)(c[1]))    )),c+=2)*/
+#define n2s(c,s) (s = xyzzy(*((unsigned short *)c)), c+=2)
+
 #define s2n(s,c)	((c[0]=(unsigned char)(((s)>> 8)&0xff), \
 			  c[1]=(unsigned char)(((s)    )&0xff)),c+=2)
 

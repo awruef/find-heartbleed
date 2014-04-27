@@ -2561,6 +2561,7 @@ tls1_process_heartbeat(SSL *s)
 	/* Read type and payload length first */
 	hbtype = *p++;
 	n2s(p, payload);
+  p += 2;
 	pl = p;
 
 	if (s->msg_callback)

@@ -13,19 +13,19 @@ int main(int argc, char *argv[]) {
   fd = open("dtin", O_RDONLY);
 
   if(fd != -1) {
-    unsigned int  selector;
-    int           res;
+    int   data;
+    int   res;
 
-    res = read(fd, &selector, sizeof(unsigned int));
+    res = read(fd, &data, sizeof(unsigned int));
 
     if(res == sizeof(unsigned int)) {
-      selector = ntohl(selector);
+      data = ntohl(data);
 
-      if(selector < sizeof(data_array)/sizeof(data_array[0])) {
-        printf("%d\n", data_array[selector]);
+      if(data >= 0 && data < sizeof(data_array)/sizeof(data_array[0])) {
+        printf("%d\n", data_array[data]);
+      } else {
+        printf("%d\n", data_array[data]);
       }
-
-      printf("%d\n", data_array[selector]);
     }
 
     close(fd);

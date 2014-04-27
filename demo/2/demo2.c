@@ -26,7 +26,8 @@ int main(int argc, char *argv[]) {
       if(size < sizeof(data_array)) {
         memcpy(buf, data_array, size);
       }
-      //memcpy(buf, data_array, size);
+
+      memcpy(buf, data_array, size);
     }
 
     close(fd);

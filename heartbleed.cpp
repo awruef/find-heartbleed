@@ -76,6 +76,9 @@ void NetworkTaintChecker::checkPreCall(const CallEvent &Call, CheckerContext &C)
   ProgramStateRef State = C.getState();
   const IdentifierInfo *ID = Call.getCalleeIdentifier();
 
+  if(ID == NULL) {
+    return;
+  }
   if(ID->getName() == "memcpy") {
     //check if the 3rd argument is tainted and constrained 
     SVal            SizeArg = Call.getArgSVal(2);
@@ -84,10 +87,6 @@ void NetworkTaintChecker::checkPreCall(const CallEvent &Call, CheckerContext &C)
     if(state->isTainted(SizeArg)) {
       SValBuilder       &svalBuilder = C.getSValBuilder();
       Optional<NonLoc>  SizeArgNL = SizeArg.getAs<NonLoc>();
-
-      if(!SizeArgNL) {
-        return;
-      }
 
       if(this->isArgUnConstrained(SizeArgNL, svalBuilder, state) == true) {
         ExplodedNode  *loc = C.generateSink();
@@ -105,6 +104,7 @@ void NetworkTaintChecker::checkPreCall(const CallEvent &Call, CheckerContext &C)
 //also check address arithmetic
 void NetworkTaintChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
                                       CheckerContext &C) const {
+  //llvm::errs() << "checkLocation\n";
   const MemRegion *R = l.getAsRegion();
   if (!R) {
     return;
@@ -128,6 +128,8 @@ void NetworkTaintChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
       return;
     }
 
+    state->dump();
+    llvm::errs() << "\n";
     if(this->isArgUnConstrained(idxNL, svalBuilder, state) == true) {
       //report a bug!
       ExplodedNode *loc = C.generateSink();
@@ -143,12 +145,17 @@ void NetworkTaintChecker::checkLocation(SVal l, bool isLoad, const Stmt* LoadS,
 
 //check for htonl/htons 
 void NetworkTaintChecker::checkPostCall(const CallEvent &Call, CheckerContext &C) const {
+  //llvm::errs() << "checkPostCall\n";
   //is htons or htonl?
   const IdentifierInfo *ID = Call.getCalleeIdentifier();
 
-  if(ID->getName() == "ntohl" || ID->getName() == "ntohl") {
-    ProgramStateRef State = C.getState();
+  if(ID == NULL) {
+    return;
+  }
 
+  if(ID->getName() == "ntohl" || ID->getName() == "xyzzy") {
+    ProgramStateRef State = C.getState();
+    //llvm::errs() << "found call to ntohl\n";
     //taint the value written to by this call 
     SymbolRef Sym = Call.getReturnValue().getAsSymbol(); 
 
